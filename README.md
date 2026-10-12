@@ -1,16 +1,19 @@
 # Primord Overlay
 
-Launcher portátil não oficial para acompanhar o painel e o mapa do Primord Survival no Windows.
+Launcher não oficial para acompanhar o painel e o mapa do Primord Survival no Windows.
 
 ## Download
 
-A primeira versão pública está sendo preparada. Quando publicada, aparecerá na seção **Releases** deste repositório. Baixe o arquivo `.zip`, extraia-o e execute o `.exe` incluído. Não é necessário instalar o Electron separadamente.
+Baixe a versão mais recente em [Releases](https://github.com/RuanFCatarino/primord-overlay/releases). Use o **Instalador** para instalar no Windows ou o **Portátil** para executar sem instalação. O pacote ZIP inclui as duas opções e instruções. Não é necessário instalar Electron separadamente.
+
+## Integração com outros projetos
+
+A API local é opcional: o launcher funciona normalmente sem conectar nenhum projeto externo. Os caminhos, autenticação, respostas e exemplos estão em [API.md](API.md). A porta padrão é `http://127.0.0.1:37621`, restrita ao próprio computador. Não exponha o token ou a porta à Internet.
 
 ## Sobre o projeto
 
 - O launcher reúne painel, mapa, minimapa e sobreposição em jogo.
-- A integração local é opcional; o launcher funciona sem conectar projetos externos.
-- A API local não deve ser exposta à Internet.
+- O mapa e as informações ao vivo dependem do que o Painel Primord fornece à sessão autenticada.
 - Este é um projeto não oficial, sem afiliação com os responsáveis por Primord Survival ou The Isle.
 
 ## Segurança
