@@ -1,6 +1,23 @@
 # Contrato de integração — Rastro Hub ↔ Gamer Hause
 
-Este documento é para implementar no painel `https://theislepainel.gamerhause.com.br/`. Não é uma lista de rotas já existentes. As únicas rotas confirmadas no JavaScript público atual são `GET /api/status`, `GET /api/me` e `GET/POST /api/friends`; `GET /api/status` responde `401` sem sessão Discord. O Rastro Hub nunca deve fingir que uma rota planejada já funciona.
+Este documento descreve a integração com `https://theislepainel.gamerhause.com.br/`. Ele separa o que está ativo no painel, o que responde explicitamente como indisponível e o que continua planejado. O Rastro Hub nunca deve transformar ausência de telemetria em dado válido.
+
+## Estado confirmado em 21/10/2026
+
+| Rota | Sessão | Estado atual |
+| --- | --- | --- |
+| `GET /api/overlay/v1/capabilities` | Pública | Ativa; fonte obrigatória para habilitar recursos e localizar cada snapshot em `feature_sources` |
+| `GET /api/overlay/v1/server` | Pública | Ativa; inclui catálogo separado de `OFICIAL` e `TESTE` e no máximo um ambiente ativo |
+| `GET /api/overlay/v1/bestiary` | Pública | Ativa em modo de referência |
+| `GET /api/overlay/v1/prime` | Pública | Ativa; modo informado em `capabilities.feature_modes` |
+| `GET /api/overlay/v1/mutations` | Pública | Ativa; modo informado em `capabilities.feature_modes` |
+| `GET /api/overlay/v1/me` | Conta vinculada | Ativa; retorna identidade mínima e Steam vinculada |
+| `GET /api/overlay/v1/state` | Conta vinculada | Ativa; snapshot autoritativo do ambiente, posição, dino e Prime quando disponíveis |
+| `GET /api/overlay/v1/friends` | Conta vinculada | Ativa; respeita autorização e visibilidade |
+| `GET /api/overlay/v1/dino`, `/position`, `/map`, `/map/markers`, `/carcass`, `/events` | Conforme a rota | Snapshots individuais indisponíveis; recursos ativos apontam para `/state` em `feature_sources`; os demais retornam `feature_unavailable` |
+| `POST /api/overlay/v1/carcass` | Conta vinculada e origem oficial | Indisponível; não executa ação no jogo |
+
+As respostas de estado usam `Cache-Control: no-store` e horário `observed_at`. `capabilities.feature_sources` evita que o launcher suponha uma rota individual quando o snapshot vem de `/state`. A API `server` identifica os dois ambientes sem duplicar cartões ou identidades do jogador. A seleção usa o único servidor ativo e rejeita conflito quando ambos aparecem ativos.
 
 ## Sessão e privacidade
 
@@ -11,7 +28,7 @@ Este documento é para implementar no painel `https://theislepainel.gamerhause.c
 - Respostas de telemetria: `Cache-Control: no-store`; sempre inclua `observed_at` UTC. O app deve tratar dados antigos como indisponíveis, não como online.
 - Toda ação de escrita exige proteção CSRF compatível com sessão por cookie, rate limit e validação no servidor. O cliente nunca determina elegibilidade por conta própria.
 
-## Rotas prioritárias
+## Contrato das rotas
 
 ### `GET /api/overlay/v1/capabilities` — público
 
@@ -22,12 +39,26 @@ Informa quais módulos realmente existem, para o launcher não exibir botões fa
   "version": 1,
   "features": {
     "server": true,
-    "active_dino": false,
-    "position": false,
-    "map": false,
+    "active_dino": true,
+    "position": true,
+    "map": true,
+    "map_markers": true,
     "carcass": false,
     "friends": true,
-    "events": false
+    "events": false,
+    "bestiary": true,
+    "prime": true,
+    "mutations": true
+  },
+  "feature_sources": {
+    "active_dino": "/api/overlay/v1/state",
+    "position": "/api/overlay/v1/state",
+    "map": "/api/overlay/v1/state",
+    "map_markers": "/api/overlay/v1/state",
+    "prime": "/api/overlay/v1/state",
+    "mutations": "/api/overlay/v1/state",
+    "server": "/api/overlay/v1/server",
+    "friends": "/api/overlay/v1/friends"
   }
 }
 ```
@@ -62,7 +93,7 @@ Identidade para o launcher. Não retorne email, token OAuth ou dados administrat
 }
 ```
 
-### `GET /api/overlay/v1/dino` — sessão obrigatória
+### `GET /api/overlay/v1/dino` — sessão obrigatória, snapshot individual planejado
 
 `active` deve ser `null` quando não houver dino vivo/ativo. `id` muda ao nascer outro dino; isso impede carregar bloqueios/cooldown de uma vida anterior. Percentuais são números de `0` a `100`, ou `null` quando desconhecidos. Não use zero para valor desconhecido.
 
@@ -83,7 +114,7 @@ Identidade para o launcher. Não retorne email, token OAuth ou dados administrat
 
 `diet` deve ser `carnivore`, `omnivore` ou `herbivore`. O servidor é a autoridade para regras da carcaça; a dieta serve apenas para visualização.
 
-### `GET /api/overlay/v1/position` — sessão obrigatória
+### `GET /api/overlay/v1/position` — sessão obrigatória, snapshot individual planejado
 
 Retorne apenas a posição do próprio jogador. `online:false` e `position:null` quando ele sair do servidor. `map_x`/`map_y` são coordenadas normalizadas de `0` a `1`; documente a orientação dos eixos e associe a `map_id`. `observed_at` permite rejeitar posição congelada.
 
@@ -102,7 +133,7 @@ Retorne apenas a posição do próprio jogador. `online:false` e `position:null`
 }
 ```
 
-### `GET /api/overlay/v1/map` — público, somente metadados estáticos
+### `GET /api/overlay/v1/map` — público, metadados estáticos planejados
 
 O raster deve ter URL HTTPS/cacheável e versão ou hash para atualizar somente quando mudar. `width` e `height` são pixels da imagem original. Uma rota separada para marcadores dinâmicos evita invalidar a imagem inteira.
 
@@ -117,11 +148,11 @@ O raster deve ter URL HTTPS/cacheável e versão ou hash para atualizar somente 
 }
 ```
 
-### `GET /api/overlay/v1/map/markers` — conforme a privacidade da camada
+### `GET /api/overlay/v1/map/markers` — planejado conforme a privacidade da camada
 
 Cada marcador precisa de `id`, `type`, `map_x`, `map_y`, `label`, `updated_at`. Camadas públicas podem ser anônimas. Marcadores de amigos exigem autorização e devem respeitar a visibilidade escolhida por cada amigo. Não exponha a posição de todos os jogadores por padrão.
 
-### `GET /api/overlay/v1/carcass` — sessão obrigatória
+### `GET /api/overlay/v1/carcass` — sessão obrigatória, planejado
 
 Retorne o estado autoritativo para o dino atual. `eligible` não deve ser inferido apenas de fome/crescimento. `cooldown_until` é UTC e `null` quando não existe cooldown. `hide_after` é opcional: o app pode ocultar o cartão após um estado terminal, mas nunca apagar o mapa.
 
@@ -141,7 +172,7 @@ Retorne o estado autoritativo para o dino atual. `eligible` não deve ser inferi
 
 Estados sugeridos: `available`, `cooldown`, `blocked`, `expired`, `unknown`. Motivos estruturados: `hunger_too_high`, `growth_limit`, `herbivore`, `not_in_game`, `cooldown`. Inclua limites em campos próprios se puderem mudar por espécie/servidor.
 
-### `POST /api/overlay/v1/carcass` — sessão obrigatória, ação explícita
+### `POST /api/overlay/v1/carcass` — sessão obrigatória, ação explícita planejada
 
 Chamado somente depois de o jogador apertar o botão/atalho e confirmar. Envie `Idempotency-Key` único por tentativa e o `dino_id` atual; o servidor valida sessão, dino, posição, regras e cooldown, sem confiar em `eligible` vindo do app. Responda `200/201` com estado atualizado, `409` se já solicitado, `422` se bloqueado, `429` se limitado.
 

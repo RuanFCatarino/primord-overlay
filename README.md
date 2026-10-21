@@ -5,9 +5,9 @@ Launcher para The Isle no Windows com escolha entre Gamer Hause e Primord a cada
 ## Estado das integrações
 
 - **Primord:** painel, minimapa, mapa grande, carcaça e guias continuam dependendo dos dados do site Primord na sessão autenticada.
-- **Gamer Hause:** o launcher abre o painel oficial e preserva sua sessão Discord em um perfil separado. Os recursos de mapa, dinossauro ativo, posição e carcaça específicos desse servidor dependem das APIs que o site ainda precisa publicar. O launcher não contorna o login nem inventa dados.
+- **Gamer Hause:** o launcher abre o painel oficial e preserva sua sessão em um perfil separado. O site já publica capabilities, catálogo OFICIAL/TESTE, identidade vinculada, estado ao vivo, amigos e referências de bestiário, Prime e mutações. Recursos marcados como indisponíveis pela API permanecem ocultos ou bloqueados; o launcher não contorna o login nem inventa dados.
 
-Para implementar a integração Gamer Hause, consulte o [contrato de APIs do Rastro Hub](RASTRO-HUB-API.md). Ele diferencia rotas existentes de rotas propostas. Para ferramentas que rodam no mesmo PC, consulte a [API local](API.md).
+Para integrar a Gamer Hause, consulte o [contrato de APIs do Rastro Hub](RASTRO-HUB-API.md). Ele registra separadamente as rotas ativas, as respostas indisponíveis e as propostas futuras. Para ferramentas que rodam no mesmo PC, consulte a [API local](API.md).
 
 ## Download
 

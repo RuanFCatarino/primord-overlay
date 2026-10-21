@@ -1,6 +1,8 @@
-# API local do Primord Overlay (v1)
+# API local do Rastro Hub (compatibilidade Primord Overlay, v1)
 
 Base: `http://127.0.0.1:37621`. A API só atende conexões no mesmo computador e é **opcional**: o launcher funciona sem qualquer integração. Ela não é uma API oficial do Painel Primord e não oferece acesso a arquivos, memória do jogo ou ações do painel.
+
+O diretório `%APPDATA%\primord-overlay` e o valor `service: primord-overlay` continuam estáveis por compatibilidade com instalações e integrações anteriores à mudança de nome para Rastro Hub.
 
 ## Autenticação
 
